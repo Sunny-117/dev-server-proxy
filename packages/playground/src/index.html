@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webpack Dev Server Proxy Playground</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .info-box {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .info-box h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        .info-box p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        .info-box code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #e83e8c;
+        }
+        .api-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .api-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .api-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .response {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .response pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 13px;
+            color: #333;
+        }
+        .loading {
+            color: #667eea;
+            font-style: italic;
+        }
+        .error {
+            border-left-color: #dc3545;
+            color: #dc3545;
+        }
+        .success {
+            border-left-color: #28a745;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .badge-mock { background: #ffc107; color: #000; }
+        .badge-proxy { background: #17a2b8; color: white; }
+        .badge-custom { background: #6f42c1; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Webpack Dev Server Proxy Playground</h1>
+        
+        <div class="info-box">
+            <h2>📖 使用说明</h2>
+            <p>这个 playground 演示了 dev-server-proxy 的各种功能：</p>
+            <p>1. <strong>Mock 数据</strong>：点击按钮测试本地 mock 接口</p>
+            <p>2. <strong>动态切换</strong>：修改 <code>.devserverrc</code> 文件可以实时切换代理配置</p>
+            <p>3. <strong>热更新</strong>：修改 <code>mock/</code> 目录下的文件会自动生效</p>
+            <p>4. <strong>自定义规则</strong>：支持 CUSTOM_API、PATH_RULES 等多种配置</p>
+        </div>
+
+        <div class="api-section">
+            <div class="api-card">
+                <h3>📝 标准 AJAX_API 接口</h3>
+                <span class="badge badge-mock">MOCK</span>
+                <p>通过 <code>AJAX_API</code> 匹配，从 query.path 提取路径</p>
+                <button onclick="testAjaxApi()">测试用户信息接口</button>
+                <button onclick="testProductList()">测试商品列表接口</button>
+                <div id="ajax-response" class="response" style="display:none;"></div>
+            </div>
+
+            <div class="api-card">
+                <h3>🎯 自定义 CUSTOM_API</h3>
+                <span class="badge badge-custom">CUSTOM</span>
+                <p>通过 <code>CUSTOM_API.rule()</code> 自定义路径映射</p>
+                <button onclick="testCustomApi()">测试 RESTful 接口</button>
+                <button onclick="testProductApi()">测试产品接口</button>
+                <div id="custom-response" class="response" style="display:none;"></div>
+            </div>
+
+            <div class="api-card">
+                <h3>🌐 代理到远程服务器</h3>
+                <span class="badge badge-proxy">PROXY</span>
+                <p>修改 <code>.devserverrc</code> 中的 PROXY 字段切换环境</p>
+                <button onclick="testProxyApi()">测试远程接口</button>
+                <div id="proxy-response" class="response" style="display:none;"></div>
+            </div>
+
+            <div class="api-card">
+                <h3>📊 日志接口</h3>
+                <span class="badge badge-mock">LOG</span>
+                <p>通过 <code>LOG_API</code> 匹配的日志接口</p>
+                <button onclick="testLogApi()">发送日志</button>
+                <div id="log-response" class="response" style="display:none;"></div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h2>🔧 动态配置测试</h2>
+            <p>尝试修改项目根目录下的 <code>.devserverrc</code> 文件：</p>
+            <p>• 修改 <code>"PROXY": "PROXY_MOCK"</code> 为 <code>"PROXY_TEST"</code> 切换到测试环境</p>
+            <p>• 修改 <code>PATH_RULES</code> 改变特定接口的代理规则</p>
+            <p>• 修改后无需重启服务，配置会自动生效！</p>
+        </div>
+    </div>
+
+    <script src="bundle.js"></script>
+</body>
+</html>

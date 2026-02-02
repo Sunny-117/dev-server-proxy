@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.devserverrc
+*.log
+.DS_Store
